@@ -1,0 +1,126 @@
+{
+  "name": "rabbitmq_message_serialization_errors",
+  "description": "RabbitMQ Message Serialization Errors refer to a type of incident where there are issues with the serialization of messages being sent via RabbitMQ. This can lead to data corruption and errors within the system. The incident involves debugging and fixing the issue in order to ensure proper functioning of the system.",
+  "params": [
+    {
+      "name": "RABBITMQ_CONFIG_FILE",
+      "value": ""
+    },
+    {
+      "name": "QUEUE_NAME",
+      "value": ""
+    },
+    {
+      "name": "DEAD_LETTER_QUEUE_NAME",
+      "value": ""
+    },
+    {
+      "name": "DELIVERY_TAG",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## RabbitMQ Message Serialization Errors\nRabbitMQ Message Serialization Errors refer to a type of incident where there are issues with the serialization of messages being sent via RabbitMQ. This can lead to data corruption and errors within the system. The incident involves debugging and fixing the issue in order to ensure proper functioning of the system."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if RabbitMQ is running"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `sudo systemctl status rabbitmq-server`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if there are any error logs related to message serialization"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `sudo grep -i \"message serialization\" /var/log/rabbitmq/*`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if the messages in the queue are corrupted"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `sudo rabbitmqctl list_queues name messages | awk '$2 > 0 {print $1}' | xargs -L1 sudo rabbitmqctl eval 'io:format(\"~s~n\", [rabbit_amqqueue:contents(\"${QUEUE_NAME}\")])'`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the message payload for a specific delivery tag"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `sudo rabbitmqctl eval 'io:format(\"~s~n\", [rabbit_amqqueue:lookup(\"${QUEUE_NAME}\", ${DELIVERY_TAG})])'`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the message payload for a specific message ID"
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `sudo rabbitmqctl eval 'io:format(\"~s~n\", [rabbit_amqqueue:lookup_by_id(\"${QUEUE_NAME}\", ${<\"<message_id}>\")])'`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the message payload in the dead letter queue"
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `sudo rabbitmqctl eval 'io:format(\"~s~n\", [rabbit_amqqueue:lookup(\"${DEAD_LETTER_QUEUE_NAME}\", ${DELIVERY_TAG})])'`"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Consider implementing message versioning, so that older versions of messages can still be processed correctly even if the serialization format changes. This can help prevent data corruption caused by incompatible message formats."
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_add_message_versioning($RABBITMQ_CONFIG_FILE)"
+    }
+  ]
+}
